@@ -9,12 +9,14 @@ import {
   query,
   orderBy,
   where,
+  setDoc,
 } from "firebase/firestore";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
 } from "firebase/auth";
 import React, { createContext, useContext, useState, useEffect } from "react";
 
@@ -28,55 +30,51 @@ export const useAppContext = () => {
   return context;
 };
 
-// Sample data
-const sampleTickets = [
-  {
-    id: 1,
-    title: "Laptop not starting",
-    description: "My work laptop is not booting up since morning",
-    category: "IT",
-    priority: "High",
-    status: "Open",
-    createdBy: "john.doe@company.com",
-    assignedTo: "it.admin@company.com",
-    createdAt: "2024-05-30T10:30:00Z",
-  },
-  {
-    id: 2,
-    title: "Payroll inquiry",
-    description: "Question about overtime calculation in last paycheck",
-    category: "HR",
-    priority: "Medium",
-    status: "In Progress",
-    createdBy: "jane.smith@company.com",
-    assignedTo: "hr.manager@company.com",
-    createdAt: "2024-05-29T14:15:00Z",
-  },
-  {
-    id: 3,
-    title: "Expense reimbursement",
-    description: "Travel expense reimbursement pending approval",
-    category: "Finance",
-    priority: "Low",
-    status: "Resolved",
-    createdBy: "mike.johnson@company.com",
-    assignedTo: "finance.team@company.com",
-    createdAt: "2024-05-28T09:45:00Z",
-  },
-];
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [tickets, setTickets] = useState([]);
 
   // Listen to Firebase auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        setUser({ email: currentUser.email, uid: currentUser.uid });
+        // Get additional user data from Firestore (like name)
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const unsubscribeUser = onSnapshot(userRef, (doc) => {
+            if (doc.exists()) {
+              // Combine auth user with Firestore user data
+              setUser({
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName,
+                ...doc.data()
+              });
+            } else {
+              setUser({
+                uid: currentUser.uid,
+                email: currentUser.email,
+                displayName: currentUser.displayName,
+              });
+            }
+          });
+          
+          return () => {
+            unsubscribeUser();
+          };
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUser({
+            uid: currentUser.uid,
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+          });
+        }
       } else {
         setUser(null);
       }
     });
+    
     return unsubscribe;
   }, []);
 
@@ -87,27 +85,61 @@ export const AppProvider = ({ children }) => {
       return;
     }
 
-    // Optionally filter tickets by user role or email here
-    // For example, admin sees all tickets; user sees only theirs:
-    let ticketsQuery = collection(db, "tickets");
+    let ticketsQuery;
+    try {
+      ticketsQuery = query(
+        collection(db, "tickets"),
+        where("createdBy", "==", user.email),
+        orderBy("createdAt", "desc")
+      );
 
-    // Example: user sees only their tickets
-    ticketsQuery = query(
-      ticketsQuery,
-      where("createdBy", "==", user.email),
-      orderBy("createdAt", "desc")
-    );
+      const unsubscribe = onSnapshot(
+        ticketsQuery, 
+        (querySnapshot) => {
+          const ticketsData = [];
+          querySnapshot.forEach((doc) => {
+            ticketsData.push({ id: doc.id, ...doc.data() });
+          });
+          console.log(`Fetched ${ticketsData.length} tickets from Firestore`);
+          setTickets(ticketsData);
+        },
+        (error) => {
+          console.error("Error fetching tickets:", error);
+        }
+      );
 
-    const unsubscribe = onSnapshot(ticketsQuery, (querySnapshot) => {
-      const ticketsData = [];
-      querySnapshot.forEach((doc) => {
-        ticketsData.push({ id: doc.id, ...doc.data() });
-      });
-      setTickets(ticketsData);
-    });
-
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up tickets listener:", error);
+      setTickets([]);
+    }
   }, [user]);
+
+  // Register user with name
+  const register = async (email, password, name) => {
+    try {
+      // Create the user with Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Update profile with display name
+      await updateProfile(user, { displayName: name });
+      
+      // Store additional user info in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        name: name,
+        email: user.email,
+        createdAt: new Date().toISOString(),
+        role: "user"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Register error:", error);
+      return false;
+    }
+  };
+
   // Login using Firebase Auth
   const login = async (email, password) => {
     try {
@@ -115,17 +147,6 @@ export const AppProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error("Login error:", error);
-      return false;
-    }
-  };
-
-  // Register user
-  const register = async (email, password) => {
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      return true;
-    } catch (error) {
-      console.error("Register error:", error);
       return false;
     }
   };
@@ -142,11 +163,14 @@ export const AppProvider = ({ children }) => {
         ...ticketData,
         status: "Open",
         createdBy: user.email,
+        createdByName: user.name || user.displayName || user.email.split('@')[0],
         assignedTo: null,
         createdAt: new Date().toISOString(),
       });
+      return true;
     } catch (error) {
       console.error("Error adding ticket:", error);
+      return false;
     }
   };
 
@@ -158,8 +182,10 @@ export const AppProvider = ({ children }) => {
         status: newStatus,
         ...(newStatus === "Resolved" && { solution }),
       });
+      return true;
     } catch (error) {
       console.error("Error updating ticket:", error);
+      return false;
     }
   };
 
@@ -168,8 +194,10 @@ export const AppProvider = ({ children }) => {
     try {
       const ticketRef = doc(db, "tickets", id);
       await deleteDoc(ticketRef);
+      return true;
     } catch (error) {
       console.error("Error deleting ticket:", error);
+      return false;
     }
   };
 

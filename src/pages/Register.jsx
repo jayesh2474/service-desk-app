@@ -55,12 +55,7 @@ const Register = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-const success = await register(formData.email.trim(), formData.password);
-if (success) {
-  navigate('/dashboard');
-} else {
-  setError('Registration failed. Please try again.');
-}
+    
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -69,12 +64,17 @@ if (success) {
     }
 
     try {
-      register({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        password: formData.password
-      });
-      navigate('/dashboard');
+      const success = await register(
+        formData.email.trim(), 
+        formData.password, 
+        formData.name.trim()
+      );
+      
+      if (success) {
+        navigate('/dashboard');
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } catch (err) {
       setError(err.message || 'Registration failed');
     } finally {

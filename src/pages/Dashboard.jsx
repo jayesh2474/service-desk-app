@@ -1,13 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Plus, Ticket, Clock, CheckCircle, AlertCircle, XCircle, Eye, Calendar, User } from 'lucide-react';
+import { Plus, Ticket, Clock, CheckCircle, AlertCircle, XCircle, Eye, Calendar, User, Loader } from 'lucide-react';
+import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const Dashboard = () => {
-  const { user, tickets } = useAppContext();
+  const { user } = useAppContext();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userTickets, setUserTickets] = useState([]);
 
-  // Filter tickets for current user
-  const userTickets = tickets.filter(ticket => ticket.createdBy === user?.email);
+  // Directly fetch tickets when component mounts or user changes
+  useEffect(() => {
+    const fetchTickets = async () => {
+      if (!user?.email) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        console.log("Attempting to fetch tickets for:", user.email);
+        
+        // Create a query to get tickets for the current user's email
+        const ticketsRef = collection(db, "tickets");
+        const q = query(
+          ticketsRef,
+          where("createdBy", "==", user.email),
+          orderBy("createdAt", "desc")
+        );
+        
+        const querySnapshot = await getDocs(q);
+        console.log("Query returned doc count:", querySnapshot.size);
+        
+        if (querySnapshot.empty) {
+          console.log("No tickets found for user", user.email);
+          setUserTickets([]);
+        } else {
+          const ticketData = [];
+          querySnapshot.forEach((doc) => {
+            console.log("Found ticket:", doc.id, doc.data().title);
+            ticketData.push({ id: doc.id, ...doc.data() });
+          });
+          setUserTickets(ticketData);
+          console.log("Set userTickets with", ticketData.length, "tickets");
+        }
+        
+        setIsLoading(false);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching tickets:", err);
+        setError(`Failed to load tickets: ${err.message}`);
+        setIsLoading(false);
+      }
+    };
+
+    setIsLoading(true);
+    fetchTickets();
+  }, [user]);
 
   // Get ticket statistics
   const stats = {
@@ -57,14 +107,95 @@ const Dashboard = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      console.error("Date formatting error:", e);
+      return 'Invalid date';
+    }
   };
+
+  // Extract user's display name from various possible sources
+  const getUserName = () => {
+    if (user?.name) return user.name;
+    if (user?.displayName) return user.displayName;
+    if (user?.email) {
+      // Extract name from email (before @ symbol)
+      const nameFromEmail = user.email.split('@')[0];
+      // Capitalize first letter and replace dots/underscores with spaces
+      return nameFromEmail
+        .split(/[._]/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    return 'User';
+  };
+
+  if (!user) {
+    // Handle case where user isn't logged in yet
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 bg-white/5 backdrop-blur border border-white/10 rounded-xl max-w-md">
+          <h2 className="text-2xl font-bold text-white mb-2">Please log in</h2>
+          <p className="text-gray-400 mb-6">You need to be logged in to view this page.</p>
+          <Link 
+            to="/login" 
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Go to login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader className="h-10 w-10 text-blue-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading your tickets...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state with option to try again
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 bg-white/5 backdrop-blur border border-white/10 rounded-xl max-w-md">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Error Loading Tickets</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button 
+              onClick={() => {
+                setIsLoading(true);
+                setError(null);
+              }} 
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Try Again
+            </button>
+            <Link 
+              to="/raise-ticket" 
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+            >
+              Create New Ticket
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
@@ -72,9 +203,12 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
-            Welcome back, {user?.name || user?.email?.split('@')[0]}!
+            Welcome back, {getUserName()}!
           </h1>
           <p className="text-gray-400">Manage your support tickets and track their progress</p>
+          <div className="mt-2 text-sm text-gray-400">
+            <p>Signed in as: {user.email}</p>
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -86,6 +220,11 @@ const Dashboard = () => {
             <Plus className="h-5 w-5 mr-2" />
             Raise New Ticket
           </Link>
+        </div>
+
+        {/* Debug Info - remove in production */}
+        <div className="mb-4 p-4 bg-black/30 rounded-lg text-xs text-gray-400">
+          <p>Debug: Found {userTickets.length} tickets for {user.email}</p>
         </div>
 
         {/* Statistics Cards */}
@@ -143,14 +282,12 @@ const Dashboard = () => {
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-white">Your Tickets</h2>
-            {userTickets.length === 0 && (
-              <Link
-                to="/raise-ticket"
-                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-              >
-                Create your first ticket
-              </Link>
-            )}
+            <Link
+              to="/raise-ticket"
+              className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+            >
+              Create new ticket
+            </Link>
           </div>
 
           {userTickets.length === 0 ? (
@@ -201,7 +338,7 @@ const Dashboard = () => {
                         
                         <div className="flex items-center gap-1">
                           <span className="text-xs">Category:</span>
-                          <span className="text-xs font-medium text-white">{ticket.category}</span>
+                          <span className="text-xs font-medium text-white">{ticket.category || 'General'}</span>
                         </div>
                         
                         {ticket.assignedTo && (
@@ -214,10 +351,13 @@ const Dashboard = () => {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <button className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-all duration-200">
+                      <Link 
+                        to={`/tickets/${ticket.id}`}
+                        className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-all duration-200"
+                      >
                         <Eye className="h-4 w-4" />
                         <span className="text-sm">View</span>
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>
