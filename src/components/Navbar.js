@@ -56,12 +56,16 @@ const Navbar = () => {
 
             {user ? (
               <>
-                <NavLink to="/dashboard" icon={BarChart3}>
-                  Dashboard
-                </NavLink>
-                <NavLink to="/raise-ticket" icon={Plus}>
-                  Raise Ticket
-                </NavLink>
+                {user.role !== "admin" && (
+                  <>
+                    <NavLink to="/dashboard" icon={BarChart3}>
+                      Dashboard
+                    </NavLink>
+                    <NavLink to="/raise-ticket" icon={Plus}>
+                      Raise Ticket
+                    </NavLink>
+                  </>
+                )}
                 {user.role === "admin" && (
                   <NavLink to="/admin" icon={Settings}>
                     Admin Panel
@@ -113,20 +117,24 @@ const Navbar = () => {
 
             {user ? (
               <>
-                <NavLink
-                  to="/dashboard"
-                  icon={BarChart3}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
-                </NavLink>
-                <NavLink
-                  to="/raise-ticket"
-                  icon={Plus}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Raise Ticket
-                </NavLink>
+                {user.role !== "admin" && (
+                  <>
+                    <NavLink
+                      to="/dashboard"
+                      icon={BarChart3}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Dashboard
+                    </NavLink>
+                    <NavLink
+                      to="/raise-ticket"
+                      icon={Plus}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Raise Ticket
+                    </NavLink>
+                  </>
+                )}
                 {user.role === "admin" && (
                   <NavLink
                     to="/admin"

@@ -17,7 +17,11 @@ const Login = () => {
   // Redirect if already logged in
   React.useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     }
   }, [user, navigate]);
 
@@ -38,26 +42,18 @@ const Login = () => {
       // Demo credentials for testing
       if (formData.email === 'admin@demo.com' && formData.password === 'admin123') {
         login(formData.email, formData.password, 'admin');
+        navigate('/admin');
       } else if (formData.email && formData.password) {
         login(formData.email, formData.password, 'user');
+        navigate('/dashboard');
       } else {
         throw new Error('Please fill in all fields');
       }
-      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const demoCredentials = [
-    { email: 'admin@demo.com', password: 'admin123', role: 'Admin' },
-    { email: 'user@demo.com', password: 'user123', role: 'User' }
-  ];
-
-  const fillDemo = (email, password) => {
-    setFormData({ email, password });
   };
 
   return (
@@ -72,23 +68,6 @@ const Login = () => {
           </div>
           <h2 className="text-4xl font-bold text-white mb-2">Welcome back</h2>
           <p className="text-gray-400">Sign in to your account to continue</p>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Demo Credentials:</h3>
-          <div className="space-y-2">
-            {demoCredentials.map((cred, index) => (
-              <button
-                key={index}
-                onClick={() => fillDemo(cred.email, cred.password)}
-                className="w-full text-left p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm text-gray-300 hover:text-white"
-              >
-                <div className="font-medium">{cred.role}</div>
-                <div className="text-xs opacity-75">{cred.email} / {cred.password}</div>
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Login Form */}
