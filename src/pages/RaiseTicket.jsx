@@ -89,9 +89,9 @@ const handleSubmit = async (e) => {
                 onChange={handleChange}
                 className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white"
               >
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
+              <option value="High" style={{ color: 'black' }}>High</option>
+    <option value="Medium" style={{ color: 'black' }}>Medium</option>
+    <option value="Low" style={{ color: 'black' }}>Low</option>
               </select>
             </div>
           </div>
