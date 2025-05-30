@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import RaiseTicket from "./pages/RaiseTicket";
 import AdminPanel from "./pages/AdminPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
+import TicketDetails from "./pages/TicketDetails";
 
 function App() {
   return (
@@ -25,6 +26,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            // In your routing configuration
+            <Route path="/tickets/:ticketId" element={<TicketDetails />} />
             <Route
               path="/dashboard"
               element={
