@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Plus, Ticket, Clock, CheckCircle, AlertCircle, XCircle, Eye, Calendar, User, Loader } from 'lucide-react';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
+import { Plus, Ticket, Clock, CheckCircle, AlertCircle, XCircle, Eye, Calendar, User, Loader, X } from 'lucide-react';
+import { collection, query, where, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const Dashboard = () => {
@@ -10,6 +10,8 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userTickets, setUserTickets] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   // Directly fetch tickets when component mounts or user changes
   useEffect(() => {
@@ -20,8 +22,6 @@ const Dashboard = () => {
       }
       
       try {
-        console.log("Attempting to fetch tickets for:", user.email);
-        
         // Create a query to get tickets for the current user's email
         const ticketsRef = collection(db, "tickets");
         const q = query(
@@ -31,19 +31,15 @@ const Dashboard = () => {
         );
         
         const querySnapshot = await getDocs(q);
-        console.log("Query returned doc count:", querySnapshot.size);
         
         if (querySnapshot.empty) {
-          console.log("No tickets found for user", user.email);
           setUserTickets([]);
         } else {
           const ticketData = [];
           querySnapshot.forEach((doc) => {
-            console.log("Found ticket:", doc.id, doc.data().title);
             ticketData.push({ id: doc.id, ...doc.data() });
           });
           setUserTickets(ticketData);
-          console.log("Set userTickets with", ticketData.length, "tickets");
         }
         
         setIsLoading(false);
@@ -58,6 +54,23 @@ const Dashboard = () => {
     setIsLoading(true);
     fetchTickets();
   }, [user]);
+
+  // Function to view detailed ticket information
+  const viewTicketDetails = async (ticketId) => {
+    try {
+      const ticketRef = doc(db, "tickets", ticketId);
+      const ticketSnap = await getDoc(ticketRef);
+      
+      if (ticketSnap.exists()) {
+        setSelectedTicket({ id: ticketSnap.id, ...ticketSnap.data() });
+        setShowModal(true);
+      } else {
+        console.error("Ticket not found");
+      }
+    } catch (err) {
+      console.error("Error fetching ticket details:", err);
+    }
+  };
 
   // Get ticket statistics
   const stats = {
@@ -119,6 +132,16 @@ const Dashboard = () => {
       console.error("Date formatting error:", e);
       return 'Invalid date';
     }
+  };
+
+  // Mask email to show only first 3 characters and domain
+  const maskEmail = (email) => {
+    if (!email) return '';
+    const [username, domain] = email.split('@');
+    if (username.length <= 3) {
+      return `${username}***@${domain}`;
+    }
+    return `${username.substring(0, 3)}***@${domain}`;
   };
 
   // Extract user's display name from various possible sources
@@ -220,11 +243,6 @@ const Dashboard = () => {
             <Plus className="h-5 w-5 mr-2" />
             Raise New Ticket
           </Link>
-        </div>
-
-        {/* Debug Info - remove in production */}
-        <div className="mb-4 p-4 bg-black/30 rounded-lg text-xs text-gray-400">
-          <p>Debug: Found {userTickets.length} tickets for {user.email}</p>
         </div>
 
         {/* Statistics Cards */}
@@ -344,20 +362,20 @@ const Dashboard = () => {
                         {ticket.assignedTo && (
                           <div className="flex items-center gap-1">
                             <User className="h-4 w-4" />
-                            <span className="text-xs">Assigned to: {ticket.assignedTo}</span>
+                            <span className="text-xs">Assigned to: {maskEmail(ticket.assignedTo)}</span>
                           </div>
                         )}
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Link 
-                        to={`/tickets/${ticket.id}`}
+                      <button
+                        onClick={() => viewTicketDetails(ticket.id)}
                         className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white rounded-lg transition-all duration-200"
                       >
                         <Eye className="h-4 w-4" />
-                        <span className="text-sm">View</span>
-                      </Link>
+                        <span className="text-sm">View Details</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -365,6 +383,94 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Ticket Details Modal */}
+        {showModal && selectedTicket && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+            <div className="bg-gray-900 border border-white/10 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-gray-900 border-b border-white/10 p-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Ticket Details</h2>
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">{selectedTicket.title}</h3>
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(selectedTicket.status)}`}>
+                    {getStatusIcon(selectedTicket.status)}
+                    {selectedTicket.status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <p className="text-sm text-gray-400">Priority:</p>
+                    <p className="font-medium">
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(selectedTicket.priority)}`}>
+                        {selectedTicket.priority}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Category:</p>
+                    <p className="font-medium text-white">{selectedTicket.category || 'General'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Created On:</p>
+                    <p className="font-medium text-white">{formatDate(selectedTicket.createdAt)}</p>
+                  </div>
+                  {selectedTicket.lastUpdated && (
+                    <div>
+                      <p className="text-sm text-gray-400">Last Updated:</p>
+                      <p className="font-medium text-white">{formatDate(selectedTicket.lastUpdated)}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-gray-400 mb-1">Description:</p>
+                  <p className="text-white whitespace-pre-line">{selectedTicket.description}</p>
+                </div>
+
+                {selectedTicket.assignedTo && (
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-blue-300 mb-1">Support Representative:</p>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-400" />
+                      <p>{maskEmail(selectedTicket.assignedTo)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTicket.status === 'Resolved' && selectedTicket.solution && (
+                  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-green-300 mb-1">Solution:</p>
+                    <p className="text-white whitespace-pre-line">{selectedTicket.solution}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-4 mt-6">
+                  <button 
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+                  >
+                    Close
+                  </button>
+                  <Link
+                    to={`/tickets/${selectedTicket.id}`}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                  >
+                    Full Details
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
