@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Plus } from 'lucide-react';
 
+
 const RaiseTicket = () => {
   const { user, addTicket } = useAppContext();
   const navigate = useNavigate();
@@ -18,21 +19,21 @@ const RaiseTicket = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newTicket = {
-      ...formData,
-      id: Date.now().toString(),
-      createdBy: user.email,
-      createdAt: new Date().toISOString(),
-      status: 'Open',
-      assignedTo: null
-    };
-    addTicket(newTicket);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    await addTicket(formData);
     navigate('/dashboard');
-  };
-
+  } catch (err) {
+    console.error("Failed to submit ticket", err);
+    alert("Something went wrong while submitting the ticket.");
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto bg-white/5 border border-white/10 rounded-xl p-6 backdrop-blur">
@@ -95,13 +96,14 @@ const RaiseTicket = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Submit Ticket
-          </button>
+          <button type="submit" disabled={loading} className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+  {loading ? "Submitting..." : (
+    <>
+      <Plus className="h-5 w-5 mr-2" />
+      Submit Ticket
+    </>
+  )}
+</button>
         </form>
       </div>
     </div>
