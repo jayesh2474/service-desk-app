@@ -27,10 +27,7 @@ const Navbar = () => {
   };
 
   const NavLink = ({ to, icon: Icon, children, onClick }) => (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
+    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
       <Link
         to={to}
         onClick={onClick}
@@ -47,7 +44,7 @@ const Navbar = () => {
   );
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
@@ -56,12 +53,9 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Link to="/" className="flex items-center space-x-2">
-              <motion.div 
+              <motion.div
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg shadow-lg"
@@ -73,7 +67,7 @@ const Navbar = () => {
           </motion.div>
 
           {/* Desktop Navigation */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -102,7 +96,7 @@ const Navbar = () => {
                 )}
 
                 {/* User Menu */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
@@ -183,20 +177,24 @@ const Navbar = () => {
                 animate="open"
                 variants={{
                   open: {
-                    transition: { staggerChildren: 0.07, delayChildren: 0.1 }
+                    transition: { staggerChildren: 0.07, delayChildren: 0.1 },
                   },
                   closed: {
-                    transition: { staggerChildren: 0.05, staggerDirection: -1 }
-                  }
+                    transition: { staggerChildren: 0.05, staggerDirection: -1 },
+                  },
                 }}
               >
                 <motion.div
                   variants={{
                     open: { y: 0, opacity: 1 },
-                    closed: { y: -20, opacity: 0 }
+                    closed: { y: -20, opacity: 0 },
                   }}
                 >
-                  <NavLink to="/" icon={Home} onClick={() => setIsMenuOpen(false)}>
+                  <NavLink
+                    to="/"
+                    icon={Home}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     Home
                   </NavLink>
                 </motion.div>
@@ -208,7 +206,7 @@ const Navbar = () => {
                         <motion.div
                           variants={{
                             open: { y: 0, opacity: 1 },
-                            closed: { y: -20, opacity: 0 }
+                            closed: { y: -20, opacity: 0 },
                           }}
                         >
                           <NavLink
@@ -222,7 +220,7 @@ const Navbar = () => {
                         <motion.div
                           variants={{
                             open: { y: 0, opacity: 1 },
-                            closed: { y: -20, opacity: 0 }
+                            closed: { y: -20, opacity: 0 },
                           }}
                         >
                           <NavLink
@@ -239,7 +237,7 @@ const Navbar = () => {
                       <motion.div
                         variants={{
                           open: { y: 0, opacity: 1 },
-                          closed: { y: -20, opacity: 0 }
+                          closed: { y: -20, opacity: 0 },
                         }}
                       >
                         <NavLink
@@ -252,16 +250,18 @@ const Navbar = () => {
                       </motion.div>
                     )}
 
-                    <motion.div 
+                    <motion.div
                       variants={{
                         open: { y: 0, opacity: 1 },
-                        closed: { y: -20, opacity: 0 }
+                        closed: { y: -20, opacity: 0 },
                       }}
                       className="pt-4 border-t border-white/10"
                     >
                       <div className="flex items-center space-x-2 px-4 py-2 text-gray-300">
                         <User size={16} />
-                        <span className="text-sm">{user.name || user.email}</span>
+                        <span className="text-sm">
+                          {user.name || user.email}
+                        </span>
                       </div>
                       <motion.button
                         onClick={handleLogout}
@@ -279,7 +279,7 @@ const Navbar = () => {
                     <motion.div
                       variants={{
                         open: { y: 0, opacity: 1 },
-                        closed: { y: -20, opacity: 0 }
+                        closed: { y: -20, opacity: 0 },
                       }}
                     >
                       <NavLink
@@ -293,7 +293,7 @@ const Navbar = () => {
                     <motion.div
                       variants={{
                         open: { y: 0, opacity: 1 },
-                        closed: { y: -20, opacity: 0 }
+                        closed: { y: -20, opacity: 0 },
                       }}
                     >
                       <NavLink

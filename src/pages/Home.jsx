@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
-import { ArrowRight, Ticket, Users, Clock, Shield, Zap, HeadphonesIcon } from 'lucide-react';
-import { fadeInUp, fadeInDown, scaleIn, staggerContainer, slideInFromBottom, bounceIn } from '../utils/animations';
+import { ArrowRight, Ticket, Users, Clock, Shield, HeadphonesIcon } from 'lucide-react';
+import { fadeInUp, fadeInDown, staggerContainer, slideInFromBottom, bounceIn } from '../utils/animations';
 
 const Home = () => {
   const { user } = useAppContext();

@@ -7,7 +7,7 @@ import { ArrowLeft, Loader, AlertCircle, CheckCircle, Clock, Calendar, User } fr
 
 const TicketDetails = () => {
   const { ticketId } = useParams();
-  const { user } = useAppContext();
+  useAppContext();
   const [ticket, setTicket] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

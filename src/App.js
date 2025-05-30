@@ -26,7 +26,6 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            // In your routing configuration
             <Route path="/tickets/:ticketId" element={<TicketDetails />} />
             <Route
               path="/dashboard"

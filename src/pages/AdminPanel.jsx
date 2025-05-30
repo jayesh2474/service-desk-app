@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { CheckCircle, XCircle, User, Wrench, Eye, Loader, AlertCircle, Clock } from 'lucide-react';
-import { collection, query, orderBy, getDocs, doc, updateDoc, limit, where } from 'firebase/firestore';
+import { CheckCircle, User, Wrench, Eye, Loader, AlertCircle, Clock } from 'lucide-react';
+import { collection, query, orderBy, getDocs, doc, updateDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Navigate } from 'react-router-dom';
 
 const AdminPanel = () => {
-  const { user, updateTicket } = useAppContext();
+  const { user } = useAppContext();
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showModal, setShowModal] = useState(false);

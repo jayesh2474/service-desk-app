@@ -48,7 +48,7 @@ export const AppProvider = ({ children }) => {
                 uid: currentUser.uid,
                 email: currentUser.email,
                 displayName: currentUser.displayName,
-                ...doc.data()
+                ...doc.data(),
               });
             } else {
               setUser({
@@ -58,7 +58,7 @@ export const AppProvider = ({ children }) => {
               });
             }
           });
-          
+
           return () => {
             unsubscribeUser();
           };
@@ -74,7 +74,7 @@ export const AppProvider = ({ children }) => {
         setUser(null);
       }
     });
-    
+
     return unsubscribe;
   }, []);
 
@@ -94,7 +94,7 @@ export const AppProvider = ({ children }) => {
       );
 
       const unsubscribe = onSnapshot(
-        ticketsQuery, 
+        ticketsQuery,
         (querySnapshot) => {
           const ticketsData = [];
           querySnapshot.forEach((doc) => {
@@ -119,20 +119,24 @@ export const AppProvider = ({ children }) => {
   const register = async (email, password, name) => {
     try {
       // Create the user with Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
-      
+
       // Update profile with display name
       await updateProfile(user, { displayName: name });
-      
+
       // Store additional user info in Firestore
       await setDoc(doc(db, "users", user.uid), {
         name: name,
         email: user.email,
         createdAt: new Date().toISOString(),
-        role: "user"
+        role: "user",
       });
-      
+
       return true;
     } catch (error) {
       console.error("Register error:", error);
@@ -163,7 +167,8 @@ export const AppProvider = ({ children }) => {
         ...ticketData,
         status: "Open",
         createdBy: user.email,
-        createdByName: user.name || user.displayName || user.email.split('@')[0],
+        createdByName:
+          user.name || user.displayName || user.email.split("@")[0],
         assignedTo: null,
         createdAt: new Date().toISOString(),
       });
