@@ -1,4 +1,22 @@
-import React, { createContext, useContext, useState } from "react";
+import { db, auth } from "../firebase"; // Your firebase config file
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  orderBy,
+  where,
+} from "firebase/firestore";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 const AppContext = createContext();
 
@@ -46,49 +64,113 @@ const sampleTickets = [
     createdAt: "2024-05-28T09:45:00Z",
   },
 ];
-
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [tickets, setTickets] = useState(sampleTickets);
+  const [tickets, setTickets] = useState([]);
 
-  const login = (email, password, role = "user") => {
-    // In real app, validate credentials with backend
-    setUser({ email, role, name: email.split("@")[0] });
-    return true;
-  };
+  // Listen to Firebase auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser({ email: currentUser.email, uid: currentUser.uid });
+      } else {
+        setUser(null);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
-  const logout = () => {
-    setUser(null);
-  };
+  // Listen to tickets collection realtime
+  useEffect(() => {
+    if (!user) {
+      setTickets([]);
+      return;
+    }
 
-  const register = (userData) => {
-    // In real app, register with backend
-    setUser({ ...userData, role: "user" });
-    return true;
-  };
+    // Optionally filter tickets by user role or email here
+    // For example, admin sees all tickets; user sees only theirs:
+    let ticketsQuery = collection(db, "tickets");
 
-  const addTicket = (ticketData) => {
-    const newTicket = {
-      ...ticketData,
-      id: Date.now(),
-      status: "Open",
-      createdBy: user?.email,
-      assignedTo: null,
-      createdAt: new Date().toISOString(),
-    };
-    setTickets((prev) => [newTicket, ...prev]);
-  };
-
-  const updateTicket = (ticketId, updates) => {
-    setTickets((prev) =>
-      prev.map((ticket) =>
-        ticket.id === ticketId ? { ...ticket, ...updates } : ticket
-      )
+    // Example: user sees only their tickets
+    ticketsQuery = query(
+      ticketsQuery,
+      where("createdBy", "==", user.email),
+      orderBy("createdAt", "desc")
     );
+
+    const unsubscribe = onSnapshot(ticketsQuery, (querySnapshot) => {
+      const ticketsData = [];
+      querySnapshot.forEach((doc) => {
+        ticketsData.push({ id: doc.id, ...doc.data() });
+      });
+      setTickets(ticketsData);
+    });
+
+    return unsubscribe;
+  }, [user]);
+  // Login using Firebase Auth
+  const login = async (email, password) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return true;
+    } catch (error) {
+      console.error("Login error:", error);
+      return false;
+    }
   };
 
-  const deleteTicket = (ticketId) => {
-    setTickets((prev) => prev.filter((ticket) => ticket.id !== ticketId));
+  // Register user
+  const register = async (email, password) => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      return true;
+    } catch (error) {
+      console.error("Register error:", error);
+      return false;
+    }
+  };
+
+  // Logout
+  const logout = async () => {
+    await signOut(auth);
+  };
+
+  // Add new ticket to Firestore
+  const addTicket = async (ticketData) => {
+    try {
+      await addDoc(collection(db, "tickets"), {
+        ...ticketData,
+        status: "Open",
+        createdBy: user.email,
+        assignedTo: null,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error adding ticket:", error);
+    }
+  };
+
+  // Update ticket status & solution in Firestore
+  const updateTicket = async (id, newStatus, solution = "") => {
+    try {
+      const ticketRef = doc(db, "tickets", id);
+      await updateDoc(ticketRef, {
+        status: newStatus,
+        ...(newStatus === "Resolved" && { solution }),
+      });
+    } catch (error) {
+      console.error("Error updating ticket:", error);
+    }
+  };
+
+  // Delete ticket from Firestore
+  const deleteTicket = async (id) => {
+    try {
+      const ticketRef = doc(db, "tickets", id);
+      await deleteDoc(ticketRef);
+    } catch (error) {
+      console.error("Error deleting ticket:", error);
+    }
   };
 
   const value = {

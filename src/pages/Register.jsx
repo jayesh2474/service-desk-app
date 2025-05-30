@@ -55,7 +55,12 @@ const Register = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
+const success = await register(formData.email.trim(), formData.password);
+if (success) {
+  navigate('/dashboard');
+} else {
+  setError('Registration failed. Please try again.');
+}
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
