@@ -33,7 +33,7 @@ A modern service desk application built with React and Firebase, designed to hel
 1. Clone the repository:
 
 ```bash
-git clone [your-repository-url]
+git clone https://github.com/jayesh2474/service-desk-app.git
 cd service-desk-app
 ```
 
