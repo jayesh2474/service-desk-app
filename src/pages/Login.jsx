@@ -42,12 +42,20 @@ const Login = () => {
 
     try {
       // Demo credentials for testing
-      if (formData.email === 'admin@demo.com' && formData.password === 'admin123') {
-        login(formData.email, formData.password, 'admin');
-        navigate('/admin');
+      if (formData.email === 'admin@example.com' && formData.password === 'admin123') {
+        const success = await login(formData.email, formData.password);
+        if (success) {
+          navigate('/admin');
+        } else {
+          throw new Error('Demo admin login failed');
+        }
       } else if (formData.email && formData.password) {
-        login(formData.email, formData.password, 'user');
-        navigate('/dashboard');
+        const success = await login(formData.email, formData.password);
+        if (success) {
+          navigate('/dashboard');
+        } else {
+          throw new Error('Invalid credentials');
+        }
       } else {
         throw new Error('Please fill in all fields');
       }
@@ -88,6 +96,16 @@ const Login = () => {
           >
             Sign in to your account to continue
           </motion.p>
+          <motion.div 
+            variants={fadeInUp}
+            className="mt-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg"
+          >
+            <p className="text-sm text-blue-200">
+              <span className="font-medium">Demo Admin Access:</span><br />
+              Email: admin@example.com<br />
+              Password: admin123
+            </p>
+          </motion.div>
         </motion.div>
 
         {/* Login Form */}

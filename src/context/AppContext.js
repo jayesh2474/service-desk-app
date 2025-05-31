@@ -33,11 +33,24 @@ export const useAppContext = () => {
 export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [tickets, setTickets] = useState([]);
+  const [isDemoAdmin, setIsDemoAdmin] = useState(false);
 
   // Listen to Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
+        // Check if it's a demo admin
+        if (currentUser.email === "admin@example.com") {
+          setIsDemoAdmin(true);
+          setUser({
+            uid: "demo-admin",
+            email: "admin@example.com",
+            displayName: "Demo Admin",
+            role: "admin",
+          });
+          return;
+        }
+
         // Get additional user data from Firestore (like name)
         try {
           const userRef = doc(db, "users", currentUser.uid);
@@ -72,6 +85,7 @@ export const AppProvider = ({ children }) => {
         }
       } else {
         setUser(null);
+        setIsDemoAdmin(false);
       }
     });
 
@@ -147,6 +161,18 @@ export const AppProvider = ({ children }) => {
   // Login using Firebase Auth
   const login = async (email, password) => {
     try {
+      // Handle demo admin login
+      if (email === "admin@example.com" && password === "admin123") {
+        setUser({
+          uid: "demo-admin",
+          email: "admin@example.com",
+          displayName: "Demo Admin",
+          role: "admin",
+        });
+        setIsDemoAdmin(true);
+        return true;
+      }
+
       await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error) {
@@ -157,6 +183,11 @@ export const AppProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
+    if (isDemoAdmin) {
+      setUser(null);
+      setIsDemoAdmin(false);
+      return;
+    }
     await signOut(auth);
   };
 
@@ -215,6 +246,7 @@ export const AppProvider = ({ children }) => {
     addTicket,
     updateTicket,
     deleteTicket,
+    isDemoAdmin,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

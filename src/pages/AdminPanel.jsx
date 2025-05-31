@@ -5,8 +5,47 @@ import { collection, query, orderBy, getDocs, doc, updateDoc, limit } from 'fire
 import { db } from '../firebase';
 import { Navigate } from 'react-router-dom';
 
+// Mock data for demo admin
+const mockTickets = [
+  {
+    id: 'mock1',
+    title: 'Cannot access email',
+    category: 'Email',
+    priority: 'High',
+    status: 'Open',
+    createdBy: 'user1@example.com',
+    createdByName: 'Ankit Jain',
+    description: 'Unable to access Outlook email client after system update.',
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'mock2',
+    title: 'Printer not working',
+    category: 'Hardware',
+    priority: 'Medium',
+    status: 'In Progress',
+    createdBy: 'user2@example.com',
+    createdByName: 'Qaidjohar Jukker',
+    description: 'Office printer showing error code E-05.',
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    assignedTo: 'admin@example.com',
+  },
+  {
+    id: 'mock3',
+    title: 'Software license renewal',
+    category: 'Software',
+    priority: 'Low',
+    status: 'Resolved',
+    createdBy: 'user3@example.com',
+    createdByName: 'Rohit Agarwal',
+    description: 'Need to renew Adobe Creative Suite license.',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    solution: 'License renewed and activated successfully.',
+  },
+];
+
 const AdminPanel = () => {
-  const { user } = useAppContext();
+  const { user, isDemoAdmin } = useAppContext();
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -18,7 +57,7 @@ const AdminPanel = () => {
   // Check if current user is an admin
   const isAdmin = user?.role === 'admin';
 
-  // Fetch all tickets from Firestore
+  // Fetch all tickets from Firestore or use mock data for demo
   useEffect(() => {
     const fetchAllTickets = async () => {
       if (!isAdmin) return;
@@ -26,12 +65,19 @@ const AdminPanel = () => {
       try {
         setIsLoading(true);
         
+        if (isDemoAdmin) {
+          // Use mock data for demo admin
+          setTickets(mockTickets);
+          setIsLoading(false);
+          return;
+        }
+
         // Create a query to get all tickets
         const ticketsRef = collection(db, "tickets");
         let ticketsQuery = query(
           ticketsRef,
           orderBy("createdAt", "desc"),
-          limit(100) // Limit to prevent loading too many
+          limit(100)
         );
 
         const querySnapshot = await getDocs(ticketsQuery);
@@ -58,7 +104,7 @@ const AdminPanel = () => {
     };
 
     fetchAllTickets();
-  }, [isAdmin]);
+  }, [isAdmin, isDemoAdmin]);
 
   // Open modal with ticket details
   const openModal = (ticket) => {
@@ -70,7 +116,24 @@ const AdminPanel = () => {
   // Update ticket status and solution
   const handleStatusChange = async (id, status, solution = '') => {
     try {
-      // Update in Firestore directly
+      if (isDemoAdmin) {
+        // Update mock data for demo admin
+        setTickets(prevTickets => 
+          prevTickets.map(ticket => 
+            ticket.id === id ? { 
+              ...ticket, 
+              status,
+              ...(status === 'Resolved' && { solution }),
+              ...(status === 'In Progress' && { assignedTo: user.email }),
+              lastUpdated: new Date().toISOString(),
+            } : ticket
+          )
+        );
+        setShowModal(false);
+        return;
+      }
+
+      // Update in Firestore for real admin
       const ticketRef = doc(db, "tickets", id);
       const updateData = {
         status,
@@ -146,6 +209,19 @@ const AdminPanel = () => {
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-4">Admin Panel</h1>
         <p className="text-gray-400 mb-6">Manage, solve, and review support tickets.</p>
+
+        {isDemoAdmin && (
+          <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+            <div className="flex items-center gap-2 text-yellow-300">
+              <AlertCircle className="h-5 w-5" />
+              <p className="font-medium">Demo Mode Active</p>
+            </div>
+            <p className="text-yellow-200/80 mt-1 text-sm">
+              You are viewing the admin panel in demo mode with mock data. This is for demonstration purposes only.
+              Real admin credentials are kept private for security reasons.
+            </p>
+          </div>
+        )}
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
