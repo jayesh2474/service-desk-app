@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 
 
 const RaiseTicket = () => {
-  const { user, addTicket } = useAppContext();
+  const {  addTicket } = useAppContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
